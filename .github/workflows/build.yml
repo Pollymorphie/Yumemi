@@ -115,7 +115,7 @@ jobs:
           for i in 1 2 3; do
             ./gradlew assembleDebug \
               --no-configuration-cache \
-              -DparsersVersionOverride=41db4821c8 \
+              -DparsersVersionOverride=1.2.2 \
               && break
             echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
             sleep 30
