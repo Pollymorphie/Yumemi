@@ -122,9 +122,11 @@ jobs:
               && break
             echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
             sleep 30
-          done      
+          done
           env:
             CI: true
+
+    
 
       # ------------------------------------------------------
       # SCHRITT 7: Build-Informationen ausgeben (optional, zum Debuggen)
