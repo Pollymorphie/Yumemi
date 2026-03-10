@@ -61,12 +61,12 @@ jobs:
       # SCHRITT 2: Java Development Kit (JDK) installieren
       # Kotlin/Android benötigt Java zum Kompilieren
       # ------------------------------------------------------
-      - name: JDK 17 einrichten
+      - name: JDK 11 einrichten
         uses: actions/setup-java@v4
         with:
           # Java-Version: 17 ist aktuell der Standard für moderne Android-Projekte
           # Ältere Projekte brauchen evtl. JDK 11 – im build.gradle nachschauen
-          java-version: '17'
+          java-version: '11'
           # Distribution = Anbieter des JDKs
           # 'temurin' = Eclipse Temurin (früher AdoptOpenJDK), kostenlos & verbreitet
           distribution: 'temurin'
