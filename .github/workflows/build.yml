@@ -115,13 +115,12 @@ jobs:
       # ------------------------------------------------------
       - name: Debug-APK bauen
         run: |
-            for i in 1 2 3; do
-              ./gradlew assembleDebug --no-configuration-cache && break
-              echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
-              sleep 30
-            done
+          for i in 1 2 3; do
+            ./gradlew assembleDebug --no-configuration-cache -DparsersVersionOverride=1.2.2 && break
+            echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
+            sleep 30
+          done
         env:
-          # Verhindert interaktive Eingabeaufforderungen von Gradle
           CI: true
 
       # ------------------------------------------------------
