@@ -114,7 +114,12 @@ jobs:
       # assembleRelease wäre für den Play Store (benötigt Signatur-Keys)
       # ------------------------------------------------------
       - name: Debug-APK bauen
-        run: ./gradlew assembleDebug
+        run: |
+            for i in 1 2 3; do
+              ./gradlew assembleDebug --no-configuration-cache && break
+              echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
+              sleep 30
+            done
         env:
           # Verhindert interaktive Eingabeaufforderungen von Gradle
           CI: true
