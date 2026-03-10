@@ -13,7 +13,7 @@ on:
     branches:
       - main    # Moderner Standard-Branch-Name
       - master  # Älterer Standard-Branch-Name
-      - devel   #geforkter stand aus de Netz
+      - devel    # Entwicklungs-Branch des Original-Repos
 
   # Trigger 2: Bei jedem Pull Request auf diese Branches
   # (nützlich um zu prüfen ob ein PR den Build bricht)
