@@ -116,7 +116,11 @@ jobs:
       - name: Debug-APK bauen
         run: |
           for i in 1 2 3; do
-            ./gradlew assembleDebug --no-configuration-cache -DparsersVersionOverride=1.2.2 && break
+            ./gradlew assembleDebug \
+              --no-configuration-cache \
+              -DparsersVersionOverride=1.2.2 \
+              -Pandroid.kotlinOptions.jvmTarget=17 \
+              && break
             echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
             sleep 30
           done
