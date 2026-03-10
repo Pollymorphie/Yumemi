@@ -43,131 +43,18 @@ jobs:
     # STEPS – einzelne Schritte innerhalb des Jobs
     # werden der Reihe nach ausgeführt
     # --------------------------------------------------------
-    steps:
+    -name: Build APK
+on:
+  push:
+    branches: [main, master, devel]
+  pull_request:
+    branches: [main, master, devel]
+  workflow_dispatch:
 
-      # ------------------------------------------------------
-      # SCHRITT 1: Repository-Code herunterladen
-      # ------------------------------------------------------
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:          # ← ab hier den neuen Block einfügen
       - name: Repository auschecken
-        # Offizielle GitHub Action zum Klonen des Repos
-        # v4 = Version 4 dieser Action
-        uses: actions/checkout@v4
-        with:
-          # Komplette Git-Historie laden (nicht nur letzter Commit)
-          # Wichtig falls das Projekt die Git-Historie ausliest (z.B. für Versionsnummern)
-          fetch-depth: 0
-
-      # ------------------------------------------------------
-      # SCHRITT 2: Java Development Kit (JDK) installieren
-      # Kotlin/Android benötigt Java zum Kompilieren
-      # ------------------------------------------------------
-      - name: JDK 11 einrichten
-        uses: actions/setup-java@v4
-        with:
-          # Java-Version: 17 ist aktuell der Standard für moderne Android-Projekte
-          # Ältere Projekte brauchen evtl. JDK 11 – im build.gradle nachschauen
-          java-version: '11'
-          # Distribution = Anbieter des JDKs
-          # 'temurin' = Eclipse Temurin (früher AdoptOpenJDK), kostenlos & verbreitet
-          distribution: 'temurin'
-
-      # ------------------------------------------------------
-      # SCHRITT 3: Android SDK einrichten
-      # Stellt sicher dass das korrekte Android SDK verfügbar ist
-      # ------------------------------------------------------
-      - name: Android SDK einrichten
-        uses: android-actions/setup-android@v3
-        # Diese Action liest automatisch die benötigte SDK-Version
-        # aus der local.properties oder build.gradle des Projekts
-
-      # ------------------------------------------------------
-      # SCHRITT 4: Gradle-Cache einrichten
-      # Gradle lädt beim ersten Build alle Abhängigkeiten herunter.
-      # Der Cache speichert diese, damit folgende Builds schneller sind.
-      # ------------------------------------------------------
-      - name: Gradle-Abhängigkeiten cachen
-        uses: actions/cache@v4
-        with:
-          # Welche Ordner sollen gecacht werden?
-          path: |
-            ~/.gradle/caches        # Heruntergeladene Bibliotheken
-            ~/.gradle/wrapper       # Gradle selbst (das Build-Tool)
-
-          # Cache-Schlüssel: Wenn sich eine .gradle-Datei ändert,
-          # wird ein neuer Cache erstellt (alter Cache wird ungültig)
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
-
-          # Falls kein exakter Treffer: nimm einen älteren passenden Cache
-          restore-keys: |
-            ${{ runner.os }}-gradle-
-
-      # ------------------------------------------------------
-      # SCHRITT 5: Gradle ausführbar machen
-      # Unter Linux muss gradlew erst die Ausführberechtigung bekommen
-      # ------------------------------------------------------
-      - name: Gradle-Wrapper ausführbar machen
-        run: chmod +x ./gradlew
-
-      # ------------------------------------------------------
-      # SCHRITT 6: Projekt kompilieren & APK bauen
-      # assembleDebug = Debug-Build (keine Signatur nötig, direkt installierbar)
-      # assembleRelease wäre für den Play Store (benötigt Signatur-Keys)
-      # ------------------------------------------------------
-      - name: Debug-APK bauen
-        run: |
-          for i in 1 2 3; do
-            ./gradlew assembleDebug \
-              --no-configuration-cache \
-              -DparsersVersionOverride=1.1 \
-              && break
-            echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
-            sleep 30
-          done
-          env:
-            CI: true
-
-    
-
-      # ------------------------------------------------------
-      # SCHRITT 7: Build-Informationen ausgeben (optional, zum Debuggen)
-      # Zeigt an welche APK-Dateien erstellt wurden
-      # ------------------------------------------------------
-      - name: Erstellte APK-Dateien anzeigen
-        # Sucht alle .apk Dateien im build-Ordner und listet sie auf
-        run: find . -name "*.apk" -not -path "*/intermediates/*" | sort
-
-      # ------------------------------------------------------
-      # SCHRITT 8: APK als Artifact speichern
-      # Artifacts = Dateien die nach dem Build heruntergeladen werden können
-      # Verfügbar unter: Actions → Run auswählen → unten "Artifacts"
-      # ------------------------------------------------------
-      - name: APK als Artifact hochladen
-        uses: actions/upload-artifact@v4
-        with:
-          # Name des Artifacts in der GitHub-UI
-          name: app-debug-apk
-
-          # Pfad zur APK-Datei
-          # Bei Multi-Modul-Projekten evtl. anpassen (z.B. app/build/...)
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-          # Wie lange soll das Artifact aufbewahrt werden? (in Tagen)
-          # Standard: 90 Tage. Bei privaten Repos zählt das gegen das Speicherlimit.
-          retention-days: 30
-
-      # ------------------------------------------------------
-      # SCHRITT 9 (optional): Bei Fehler – Logs hochladen
-      # Falls der Build fehlschlägt, werden die Gradle-Logs gespeichert
-      # so kannst du nachlesen was schiefgelaufen ist
-      # ------------------------------------------------------
-      - name: Gradle-Logs bei Fehler hochladen
-        # "if: failure()" = dieser Schritt läuft NUR wenn ein vorheriger Schritt fehlgeschlagen ist
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: gradle-fehler-logs
-          path: |
-            ~/.gradle/daemon/*/daemon-*.log
-            **/build/reports/
-          # Kürzere Aufbewahrung für Logs
-          retention-days: 7
+        ...
