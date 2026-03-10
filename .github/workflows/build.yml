@@ -76,19 +76,6 @@ jobs:
         uses: android-actions/setup-android@v3
 
       # ------------------------------------------------------
-      # SCHRITT 4: Auf JDK 11 wechseln
-      # Das Projekt selbst ist in build.gradle auf JVM 11
-      # konfiguriert (sourceCompatibility/jvmTarget = 11).
-      # setup-java überschreibt JAVA_HOME – ab jetzt nutzt
-      # Gradle/Kotlin automatisch JDK 11 zum Kompilieren.
-      # ------------------------------------------------------
-      - name: JDK 11 einrichten (für Kotlin-Kompilierung)
-        uses: actions/setup-java@v4
-        with:
-          java-version: '11'
-          distribution: 'temurin'
-
-      # ------------------------------------------------------
       # SCHRITT 5: Gradle-Cache einrichten
       # Gradle lädt beim ersten Build alle Abhängigkeiten herunter.
       # Der Cache speichert diese, damit folgende Builds schneller sind.
