@@ -121,7 +121,6 @@ jobs:
             sleep 30
           done
         env:
-          # Verhindert interaktive Eingabeaufforderungen von Gradle
           CI: true
 
       # ------------------------------------------------------
