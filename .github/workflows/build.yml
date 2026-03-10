@@ -139,13 +139,10 @@ jobs:
       - name: APK als Artifact hochladen
         uses: actions/upload-artifact@v4
         with:
-          # Name des Artifacts in der GitHub-UI
           name: app-debug-apk
-
-          # Wildcard-Pfad: findet die APK unabhängig vom genauen Speicherort
-          path: "**/*.apk"
-
-          # Wie lange soll das Artifact aufbewahrt werden? (in Tagen)
+          path: |
+            **/*.apk
+            **/outputs/apk/**
           retention-days: 30
 
       # ------------------------------------------------------
