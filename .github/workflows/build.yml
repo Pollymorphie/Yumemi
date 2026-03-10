@@ -13,10 +13,9 @@ on:
     branches:
       - main    # Moderner Standard-Branch-Name
       - master  # Älterer Standard-Branch-Name
-      - devel    # Entwicklungs-Branch des Original-Repos
+      - devel   # Entwicklungs-Branch des Original-Repos
 
   # Trigger 2: Bei jedem Pull Request auf diese Branches
-  # (nützlich um zu prüfen ob ein PR den Build bricht)
   pull_request:
     branches:
       - main
@@ -37,24 +36,143 @@ jobs:
 
     # Auf welchem Betriebssystem soll der Job laufen?
     # ubuntu-latest = aktuellste Ubuntu LTS Version (kostenlos bei GitHub)
+    # Hinweis: Ubuntu ist nur der Build-Server, nicht das Zielgerät!
     runs-on: ubuntu-latest
 
     # --------------------------------------------------------
     # STEPS – einzelne Schritte innerhalb des Jobs
     # werden der Reihe nach ausgeführt
     # --------------------------------------------------------
-    -name: Build APK
-on:
-  push:
-    branches: [main, master, devel]
-  pull_request:
-    branches: [main, master, devel]
-  workflow_dispatch:
+    steps:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-
-    steps:          # ← ab hier den neuen Block einfügen
+      # ------------------------------------------------------
+      # SCHRITT 1: Repository-Code herunterladen
+      # ------------------------------------------------------
       - name: Repository auschecken
-        ...
+        uses: actions/checkout@v4
+        with:
+          # Komplette Git-Historie laden (nicht nur letzter Commit)
+          fetch-depth: 0
+
+      # ------------------------------------------------------
+      # SCHRITT 2: JDK 17 installieren
+      # Das Android SDK (sdkmanager) benötigt zwingend JDK 17.
+      # Deshalb wird JDK 17 ZUERST gesetzt, damit das SDK
+      # im nächsten Schritt problemlos eingerichtet werden kann.
+      # ------------------------------------------------------
+      - name: JDK 17 einrichten (für Android SDK)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      # ------------------------------------------------------
+      # SCHRITT 3: Android SDK einrichten
+      # Läuft jetzt mit JDK 17 → kein Fehler mehr vom sdkmanager.
+      # Installiert automatisch die benötigten SDK-Versionen
+      # aus der build.gradle des Projekts.
+      # ------------------------------------------------------
+      - name: Android SDK einrichten
+        uses: android-actions/setup-android@v3
+
+      # ------------------------------------------------------
+      # SCHRITT 4: Auf JDK 11 wechseln
+      # Das Projekt selbst ist in build.gradle auf JVM 11
+      # konfiguriert (sourceCompatibility/jvmTarget = 11).
+      # setup-java überschreibt JAVA_HOME – ab jetzt nutzt
+      # Gradle/Kotlin automatisch JDK 11 zum Kompilieren.
+      # ------------------------------------------------------
+      - name: JDK 11 einrichten (für Kotlin-Kompilierung)
+        uses: actions/setup-java@v4
+        with:
+          java-version: '11'
+          distribution: 'temurin'
+
+      # ------------------------------------------------------
+      # SCHRITT 5: Gradle-Cache einrichten
+      # Gradle lädt beim ersten Build alle Abhängigkeiten herunter.
+      # Der Cache speichert diese, damit folgende Builds schneller sind.
+      # ------------------------------------------------------
+      - name: Gradle-Abhängigkeiten cachen
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches        # Heruntergeladene Bibliotheken
+            ~/.gradle/wrapper       # Gradle selbst (das Build-Tool)
+
+          # Cache-Schlüssel: Wenn sich eine .gradle-Datei ändert,
+          # wird ein neuer Cache erstellt (alter Cache wird ungültig)
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+
+          # Falls kein exakter Treffer: nimm einen älteren passenden Cache
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      # ------------------------------------------------------
+      # SCHRITT 6: Gradle ausführbar machen
+      # Unter Linux muss gradlew erst die Ausführberechtigung bekommen
+      # ------------------------------------------------------
+      - name: Gradle-Wrapper ausführbar machen
+        run: chmod +x ./gradlew
+
+      # ------------------------------------------------------
+      # SCHRITT 7: Projekt kompilieren & APK bauen
+      # --no-configuration-cache  → deaktiviert Gradle 9 Cache-Bug
+      # -DparsersVersionOverride  → überschreibt den kaputten Commit-Hash
+      #                             mit Version 1.1 (mit JVM 11 kompatibel)
+      # Der Retry-Loop versucht den Build 3x, da JitPack manchmal
+      # beim ersten Abruf einer Version fehlschlägt.
+      # ------------------------------------------------------
+      - name: Debug-APK bauen
+        run: |
+          for i in 1 2 3; do
+            ./gradlew assembleDebug \
+              --no-configuration-cache \
+              -DparsersVersionOverride=1.1 \
+              && break
+            echo "Versuch $i fehlgeschlagen, warte 30 Sekunden..."
+            sleep 30
+          done
+        env:
+          # Verhindert interaktive Eingabeaufforderungen von Gradle
+          CI: true
+
+      # ------------------------------------------------------
+      # SCHRITT 8: Build-Informationen ausgeben (zum Debuggen)
+      # Zeigt an welche APK-Dateien erstellt wurden und wo sie liegen
+      # ------------------------------------------------------
+      - name: Erstellte APK-Dateien anzeigen
+        run: find . -name "*.apk" -not -path "*/intermediates/*" | sort
+
+      # ------------------------------------------------------
+      # SCHRITT 9: APK als Artifact speichern
+      # Artifacts = Dateien die nach dem Build heruntergeladen werden können
+      # Verfügbar unter: Actions → Run auswählen → unten "Artifacts"
+      # "**/*.apk" findet die APK egal wo sie im Projektordner liegt
+      # ------------------------------------------------------
+      - name: APK als Artifact hochladen
+        uses: actions/upload-artifact@v4
+        with:
+          # Name des Artifacts in der GitHub-UI
+          name: app-debug-apk
+
+          # Wildcard-Pfad: findet die APK unabhängig vom genauen Speicherort
+          path: "**/*.apk"
+
+          # Wie lange soll das Artifact aufbewahrt werden? (in Tagen)
+          retention-days: 30
+
+      # ------------------------------------------------------
+      # SCHRITT 10 (optional): Bei Fehler – Logs hochladen
+      # Läuft NUR wenn ein vorheriger Schritt fehlgeschlagen ist.
+      # So kannst du nachträglich analysieren was schiefgelaufen ist.
+      # ------------------------------------------------------
+      - name: Gradle-Logs bei Fehler hochladen
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gradle-fehler-logs
+          path: |
+            ~/.gradle/daemon/*/daemon-*.log
+            **/build/reports/
+          retention-days: 7
